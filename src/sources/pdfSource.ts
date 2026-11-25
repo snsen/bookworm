@@ -79,7 +79,9 @@ export class PdfSource implements BookSource {
       canvas.style.width = `${Math.round(base.width * fit)}px`;
       canvas.style.height = `${Math.round(base.height * fit)}px`;
 
-      const task = page.render({ canvas, viewport });
+      const night = ctx.toneName === 'night';
+      // In night tone, photos keep their colours: we need to know where they are.
+      const task = page.render({ canvas, viewport, recordImages: night });
       const onAbort = () => task.cancel();
       signal.addEventListener('abort', onAbort, { once: true });
       try {
@@ -89,7 +91,7 @@ export class PdfSource implements BookSource {
         page.cleanup();
       }
       signal.throwIfAborted();
-      applyTone(canvas, ctx.tone, ctx.toneName === 'night');
+      applyTone(canvas, ctx.tone, night, night ? imageRects(task.imageCoordinates, canvas) : []);
       this.rendersSinceCleanup++;
 
       const wrap = document.createElement('div');
@@ -133,11 +135,21 @@ export class PdfSource implements BookSource {
  *  - white/sepia: paper white → paper colour, black text → ink colour
  *  - night: inverted, so a dark page with light text
  */
-function applyTone(canvas: HTMLCanvasElement, tone: ToneColors, invert: boolean): void {
+function applyTone(canvas: HTMLCanvasElement, tone: ToneColors, invert: boolean, photos: Rect[]): void {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
   const { width: w, height: h } = canvas;
+  // A scanned book is one big image per page: invert it like text, or it would glare.
+  const photoArea = photos.reduce((a, r) => a + r.w * r.h, 0);
+  const keepPhotos = invert && photos.length > 0 && photoArea < w * h * 0.6;
   ctx.save();
+  if (keepPhotos) {
+    // Tone everything except the photos (even-odd: page minus photo rectangles)…
+    const clip = new Path2D();
+    clip.rect(0, 0, w, h);
+    for (const r of photos) clip.rect(r.x, r.y, r.w, r.h);
+    ctx.clip(clip, 'evenodd');
+  }
   if (invert) {
     ctx.globalCompositeOperation = 'difference';
     ctx.fillStyle = '#fff';
@@ -152,4 +164,39 @@ function applyTone(canvas: HTMLCanvasElement, tone: ToneColors, invert: boolean)
   ctx.fillStyle = invert ? tone.paper : tone.ink;
   ctx.fillRect(0, 0, w, h);
   ctx.restore();
+  if (keepPhotos) {
+    // …and only dim the photos a little, so they don't glare in a dark room.
+    ctx.save();
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.fillStyle = '#a49c90';
+    for (const r of photos) ctx.fillRect(r.x, r.y, r.w, r.h);
+    ctx.restore();
+  }
+}
+
+interface Rect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/**
+ * PDF.js reports each drawn image as three corners (normalised to the canvas):
+ * origin, and the ends of its two edges. Returns pixel-space bounding boxes.
+ */
+export function imageRects(coords: ArrayLike<number> | null | undefined, size: { width: number; height: number }): Rect[] {
+  const out: Rect[] = [];
+  if (!coords) return out;
+  for (let i = 0; i + 5 < coords.length; i += 6) {
+    const xs = [coords[i], coords[i + 2], coords[i + 4], coords[i + 2] + coords[i + 4] - coords[i]];
+    const ys = [coords[i + 1], coords[i + 3], coords[i + 5], coords[i + 3] + coords[i + 5] - coords[i + 1]];
+    const x0 = Math.max(0, Math.min(...xs)) * size.width;
+    const y0 = Math.max(0, Math.min(...ys)) * size.height;
+    const x1 = Math.min(1, Math.max(...xs)) * size.width;
+    const y1 = Math.min(1, Math.max(...ys)) * size.height;
+    // Ignore hairlines and tiny ornaments; they read better inverted with the text.
+    if (x1 - x0 > 24 && y1 - y0 > 24) out.push({ x: x0, y: y0, w: x1 - x0, h: y1 - y0 });
+  }
+  return out;
 }

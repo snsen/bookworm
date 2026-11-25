@@ -7,7 +7,7 @@ export const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 export const fixture = (name) => join(root, 'fixtures', name);
 
 export function requireFixtures() {
-  const missing = ['pride-a5.pdf', 'pride.epub', 'alice.epub', 'drm-adobe.epub', 'fake-kindle.azw3'].filter(
+  const missing = ['pride-a5.pdf', 'pride.epub', 'alice.epub', 'drm-adobe.epub', 'fake-kindle.azw3', 'photo.pdf'].filter(
     (f) => !existsSync(fixture(f)),
   );
   if (missing.length) {

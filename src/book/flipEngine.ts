@@ -26,8 +26,12 @@ export class FlipBook {
    * a hard cover stuck mid-rotation in the engine, so requests wait for the turn to end.
    */
   private pending = 0;
+  private size: Size;
+  /** Set once the current turn's destination has been guessed (for centring). */
+  private predicted = false;
 
   constructor(container: HTMLElement, opts: FlipBookOptions) {
+    this.size = opts.size;
     this.root = document.createElement('div');
     this.root.className = 'flipbook';
     container.appendChild(this.root);
@@ -66,13 +70,45 @@ export class FlipBook {
       respectReducedMotion: false,
     });
     this.engine.on('flip', (e) => {
+      this.centre(e.data.visiblePages);
       for (const l of this.flipListeners) l(e.data.visiblePages, e.data.page);
     });
     this.engine.on('changeState', (e) => {
       if (e.data.state === FlippingState.FLIPPING) for (const l of this.turnStartListeners) l();
-      if (e.data.state === FlippingState.READ && this.pending !== 0) setTimeout(this.drain, 0);
+      if (e.data.state === FlippingState.READ) {
+        this.predicted = false;
+        this.centre(this.engine.getVisiblePages());
+        if (this.pending !== 0) setTimeout(this.drain, 0);
+      }
+    });
+    // Start sliding towards the new centre as soon as a turn starts, not after it lands.
+    this.engine.on('turnProgress', (e) => {
+      if (this.predicted) return;
+      this.predicted = true;
+      this.centre(this.predictVisible(e.data.direction));
     });
     this.engine.loadFromHTML(pages);
+    this.centre(this.engine.getVisiblePages());
+  }
+
+  /**
+   * A lone page (the cover, or a last page without a partner) sits on one half of
+   * the spread; shift the book by half a page so that page is centred on screen.
+   */
+  private centre(visible: number[]): void {
+    let shift = 0;
+    if (visible.length === 1) shift = visible[0] % 2 === 0 ? -this.size.width / 2 : this.size.width / 2;
+    this.root.style.transform = shift ? `translateX(${shift}px)` : '';
+  }
+
+  /** Where the current turn will land, from its direction. */
+  private predictVisible(direction: 'next' | 'prev'): number[] {
+    const v = this.engine.getVisiblePages();
+    const last = this.pageCount - 1;
+    if (v.length === 1) return [0, 1]; // leaving a lone page always opens a spread
+    if (direction === 'prev' && Math.min(...v) === 1) return [0];
+    if (direction === 'next' && Math.max(...v) + 1 === last && last % 2 === 1) return [last];
+    return v;
   }
 
   onFlip(listener: FlipListener): () => void {
@@ -143,12 +179,17 @@ export class FlipBook {
     if (this.engine.isAnimating()) this.engine.cancelTurn();
     const target = Math.max(0, Math.min(this.pageCount - 1, page));
     if (animate) this.engine.flipToPage(target);
-    else this.engine.turnToPage(target);
+    else {
+      this.engine.turnToPage(target);
+      this.centre(this.engine.getVisiblePages());
+    }
   }
 
   resize(size: Size): void {
+    this.size = size;
     this.engine.updateSettings({ width: size.width, height: size.height });
     this.engine.update();
+    this.centre(this.engine.getVisiblePages());
   }
 
   setPaper(color: string): void {

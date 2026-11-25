@@ -58,10 +58,17 @@ button {
   width: 100%;
   height: 100%;
   grid-area: 1 / 1;
+  /* Keep the book clear of the toolbar; in full screen the toolbar hides itself. */
+  padding-bottom: var(--toolbar-space, 76px);
+}
+body.is-fullscreen .book-area {
+  padding-bottom: 0;
 }
 
 .flipbook {
   filter: drop-shadow(0 18px 40px rgba(0, 0, 0, 0.55));
+  /* A lone cover/last page is centred by sliding the book half a page. */
+  transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .page-inner {
@@ -570,7 +577,8 @@ body.ui-idle * {
 @media (prefers-reduced-motion: reduce) {
   .toolbar,
   .dim,
-  .stage {
+  .stage,
+  .flipbook {
     transition: none;
   }
 }

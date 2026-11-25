@@ -169,6 +169,7 @@ Bu komut kamu malı test kitaplarını `fixtures/` klasörüne indirir ve üreti
 
 - `alice.epub` ve `pride.epub`: [Standard Ebooks](https://standardebooks.org)'un kaynakları. Project Gutenberg metinlerinden hazırlanmış, CC0 ile kamu malı. GitHub'dan indirilir.
 - `pride-a5.pdf`: Aynı metinden Chromium ile basılan 654 sayfalık bir PDF.
+- `photo.pdf`: Fotoğraflı sayfalar ve taranmış gibi tek resimden oluşan bir sayfa (gece tonu testi için).
 - `drm-adobe.epub` ve `fake-kindle.azw3`: Hata mesajlarını denemek için sahte dosyalar.
 
 Playwright tarayıcıları yüklü değilse (bir kerelik):
@@ -177,7 +178,7 @@ Playwright tarayıcıları yüklü değilse (bir kerelik):
 npx playwright install chromium firefox
 ```
 
-Uçtan uca testler (üretim derlemesine karşı, 12 senaryo):
+Uçtan uca testler (üretim derlemesine karşı, 14 senaryo):
 
 ```bash
 npm run e2e
@@ -207,6 +208,6 @@ Geliştirme ortamında Firefox indirilemediği için otomatik testler yalnızca 
 ## Bilinen sınırlamalar
 
 - Sabit düzenli (fixed-layout) EPUB'lar akışkan metin gibi sayfalanır.
-- Gece tonunda PDF'teki fotoğraflar negatif görünür (tüm sayfa tersine çevrilir). EPUB'da yalnızca çizimler tersine çevrilir, fotoğraflar sadece karartılır.
+- Gece tonunda PDF'teki fotoğraflar doğal renginde kalır ve hafifçe karartılır. Taranmış kitaplarda ise sayfanın büyük kısmı tek bir resim olduğundan sayfa tamamen ters çevrilir.
 - Gizlenmiş (obfuscated) gömülü yazı tipleri yüklenmez, yerine sistemdeki serif yazı tipi kullanılır.
 - İlk sayfa gerçek bir kitaptaki gibi sağda tek başına durur. Kapak sert bir sayfa olarak çevrilir.

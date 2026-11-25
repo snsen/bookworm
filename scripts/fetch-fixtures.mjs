@@ -5,6 +5,7 @@
 //   - pride-a5.pdf        "Pride and Prejudice" printed to a 300+ page A5 PDF with Chromium
 //   - drm-adobe.epub      A small EPUB carrying an Adobe ADEPT rights.xml (for the DRM error path)
 //   - fake-kindle.azw3    A file with a MOBI header (for the Kindle error path)
+//   - photo.pdf           Text pages with a colour photo, then a full-page image (like a scan)
 //
 // Standard Ebooks (https://standardebooks.org) produces carefully edited editions of
 // Project Gutenberg transcriptions and dedicates its work to the public domain (CC0).
@@ -130,6 +131,48 @@ async function buildPdf(source, outPath) {
   }
 }
 
+/** A small PDF mixing text with a colour "photo", plus one page that is a single full-page image. */
+async function buildPhotoPdf(outPath) {
+  const { chromium } = require('playwright');
+  const browser = await chromium.launch();
+  try {
+    const page = await browser.newPage();
+    // Paint the "photo" with a canvas so the PDF embeds it as a raster image.
+    const photo = await page.evaluate(() => {
+      const c = document.createElement('canvas');
+      c.width = 600;
+      c.height = 400;
+      const g = c.getContext('2d');
+      const sky = g.createLinearGradient(0, 0, 0, 400);
+      sky.addColorStop(0, '#3b7dd8');
+      sky.addColorStop(1, '#f0b35a');
+      g.fillStyle = sky;
+      g.fillRect(0, 0, 600, 400);
+      g.fillStyle = '#e8562a';
+      g.beginPath();
+      g.arc(420, 150, 70, 0, Math.PI * 2);
+      g.fill();
+      g.fillStyle = '#2f6b2f';
+      g.fillRect(0, 300, 600, 100);
+      return c.toDataURL('image/png');
+    });
+    const text = 'Once upon a time, in a quiet house at the edge of the forest, a lamp was left burning. '.repeat(6);
+    const html = `<!doctype html><html><head><style>
+      @page { size: A5; margin: 16mm; } body { font: 12pt Georgia, serif; }
+      img.photo { width: 100%; display: block; margin: 1em 0; } .page { break-after: page; }
+      img.scan { width: 100%; height: 175mm; display: block; }
+    </style></head><body>
+      <div class="page"><h1>Photo test</h1><p>${text}</p><img class="photo" src="${photo}"><p>${text}</p></div>
+      <div class="page"><p>${text}</p><img class="photo" src="${photo}"></div>
+      <div><img class="scan" src="${photo}"></div>
+    </body></html>`;
+    await page.setContent(html, { waitUntil: 'load' });
+    await page.pdf({ path: outPath, format: 'A5', preferCSSPageSize: true });
+  } finally {
+    await browser.close();
+  }
+}
+
 async function main() {
   await mkdir(outDir, { recursive: true });
   const force = process.argv.includes('--force');
@@ -160,6 +203,12 @@ async function main() {
     console.log('✓ pride-a5.pdf');
   } else {
     console.log('✓ pride-a5.pdf (exists)');
+  }
+
+  const photoOut = join(outDir, 'photo.pdf');
+  if (force || !(await exists(photoOut))) {
+    await buildPhotoPdf(photoOut);
+    console.log('✓ photo.pdf');
   }
 
   // DRM-protected EPUB stand-in: valid package + Adobe ADEPT rights file + encrypted content entry.

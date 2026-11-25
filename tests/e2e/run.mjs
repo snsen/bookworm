@@ -110,6 +110,39 @@ await test('render window stays bounded while turning 60 spreads', async (keep) 
   return page;
 });
 
+await test('lone cover and last page are centred; book clears the toolbar', async (keep) => {
+  const page = keep(await newPage());
+  await open(page, 'pride-a5.pdf');
+  const geometry = () =>
+    page.evaluate(() => {
+      const shown = [...document.querySelectorAll('.page.--shown, .page')].filter(
+        (p) => getComputedStyle(p).display !== 'none' && p.classList.contains('--shown'),
+      );
+      const book = document.querySelector('.flipbook').getBoundingClientRect();
+      const toolbar = document.querySelector('.toolbar').getBoundingClientRect();
+      return { shown: shown.length, bookCentre: (book.left + book.right) / 2, bookBottom: book.bottom, toolbarTop: toolbar.top };
+    });
+  const pageCentre = () =>
+    page.evaluate(() => {
+      const visible = window.__bookworm.state().visible;
+      const el = document.querySelectorAll('.flipbook .page')[visible[0]].getBoundingClientRect();
+      return visible.length === 1 ? (el.left + el.right) / 2 : null;
+    });
+  await sleep(900); // centring transition
+  assert.ok(Math.abs((await pageCentre()) - 960) < 4, `cover centre ${await pageCentre()}`);
+  const g = await geometry();
+  assert.ok(g.bookBottom <= g.toolbarTop, `book bottom ${g.bookBottom} vs toolbar ${g.toolbarTop}`);
+  await page.keyboard.press('ArrowRight');
+  await settled(page);
+  await sleep(900);
+  assert.ok(Math.abs((await geometry()).bookCentre - 960) < 4, 'spread centred');
+  await page.keyboard.press('End');
+  await settled(page);
+  await sleep(900);
+  assert.ok(Math.abs((await pageCentre()) - 960) < 4, `last page centre ${await pageCentre()}`);
+  return page;
+});
+
 await test('mouse: click pages, click stage, drag corner', async (keep) => {
   const page = keep(await newPage());
   await open(page, 'pride.epub');
@@ -193,6 +226,32 @@ await test('night tone re-renders PDF pages and dims the stage', async (keep) =>
   assert.ok(dark < 150, `paper pixel sum ${dark}`);
   const dim = await page.evaluate(() => getComputedStyle(document.querySelector('.dim')).opacity);
   assert.equal(Number(dim).toFixed(2), '0.25');
+  return page;
+});
+
+await test('night tone keeps photos in colour but inverts scanned pages', async (keep) => {
+  const page = keep(await newPage({ tone: 'night' }));
+  await open(page, 'photo.pdf');
+  await page.keyboard.press('ArrowRight');
+  await settled(page);
+  // Sample pixels of the photo (page 2) and of the text area.
+  const px = (index, fx, fy) =>
+    page.evaluate(
+      ([i, x, y]) => {
+        const c = document.querySelectorAll('.flipbook .page')[i].querySelector('canvas');
+        const d = c.getContext('2d').getImageData(Math.floor(c.width * x), Math.floor(c.height * y), 1, 1).data;
+        return [d[0], d[1], d[2]];
+      },
+      [index, fx, fy],
+    );
+  const [r, g, b] = await px(2, 0.5, 0.61); // green grass at the bottom of the photo
+  assert.ok(g > r && g > b, `photo keeps its green: ${[r, g, b]}`);
+  const paper = await px(2, 0.05, 0.05);
+  assert.ok(paper[0] + paper[1] + paper[2] < 150, `paper is dark: ${paper}`);
+  await page.keyboard.press('ArrowRight');
+  await settled(page);
+  const [sr, sg, sb] = await px(3, 0.5, 0.75); // full-page image: inverted like a scan
+  assert.ok(!(sg > sr && sg > sb), `scan is inverted: ${[sr, sg, sb]}`);
   return page;
 });
 

@@ -18,6 +18,8 @@ import { createDustLayer } from './ui/ambience';
 
 const PREFETCH_AHEAD = 6;
 const PREFETCH_BEHIND = 2;
+/** Height kept free for the toolbar outside full screen (must match --toolbar-space). */
+const TOOLBAR_SPACE = 76;
 
 interface Session {
   source: BookSource;
@@ -285,7 +287,11 @@ class App {
   // ───────────────────────── layout ─────────────────────────
 
   private stageSize(): Size {
-    return { width: this.stage.clientWidth || window.innerWidth, height: this.stage.clientHeight || window.innerHeight };
+    const width = this.stage.clientWidth || window.innerWidth;
+    const height = this.stage.clientHeight || window.innerHeight;
+    // Outside full screen the toolbar stays visible, so keep the book clear of it.
+    const reserve = isFullscreen() ? 0 : TOOLBAR_SPACE;
+    return { width, height: height - reserve };
   }
 
   private pageSize(aspect: number): Size {
