@@ -14,6 +14,7 @@ import { SettingsPanel } from './ui/settingsPanel';
 import { ErrorDialog, LoadingOverlay, Welcome } from './ui/screens';
 import { IdleHider, isFullscreen, toggleFullscreen } from './ui/fullscreen';
 import { bindInput } from './ui/input';
+import { createDustLayer } from './ui/ambience';
 
 const PREFETCH_AHEAD = 6;
 const PREFETCH_BEHIND = 2;
@@ -43,6 +44,7 @@ class App {
   private toolbar: Toolbar;
   private panel: SettingsPanel;
   private resizeTimer: ReturnType<typeof setTimeout> | null = null;
+  private flipCount = 0;
 
   constructor() {
     this.toolbar = new Toolbar({
@@ -62,6 +64,7 @@ class App {
     this.stage.append(this.bookArea, this.welcome.el);
     document.body.append(
       this.stage,
+      createDustLayer(),
       this.dim,
       this.toolbar.el,
       this.panel.el,
@@ -118,6 +121,8 @@ class App {
     root.setProperty('--stage-bg', s.background);
     root.setProperty('--paper', tone.paper);
     root.setProperty('--ink', tone.ink);
+    root.setProperty('--accent-ink', tone.accent);
+    document.body.classList.toggle('ambience', s.ambience);
     root.setProperty('--epub-vector-filter', s.tone === 'night' ? 'invert(0.82) hue-rotate(180deg)' : 'none');
     root.setProperty('--epub-raster-filter', s.tone === 'night' ? 'brightness(0.72)' : 'none');
     document.documentElement.dataset.tone = s.tone;
@@ -246,6 +251,7 @@ class App {
     cache.setVisible(book.visiblePages);
 
     book.onFlip((visible) => {
+      this.flipCount++;
       cache.setVisible(visible);
       this.toolbar.setPages(visible, source.pageCount);
     });
@@ -346,6 +352,7 @@ class App {
           cache: s.cache.getStats(),
           visibleReady: s.cache.isVisibleReady(),
           animating: s.book.isAnimating,
+          flips: this.flipCount,
         };
       },
       settings: () => ({ ...this.settings }),

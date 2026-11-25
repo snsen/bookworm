@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AutoPlayer, type Turnable } from '../../src/player/autoPlayer';
 
-function fakeBook(pages: number): Turnable & { page: number } {
+function fakeBook(pages: number): Turnable & { page: number; isAnimating: boolean } {
   return {
     page: 0,
     isAnimating: false,
@@ -73,7 +73,7 @@ describe('AutoPlayer', () => {
     p.start();
     vi.advanceTimersByTime(3000);
     expect(book.page).toBe(0);
-    (book as { isAnimating: boolean }).isAnimating = false;
+    book.isAnimating = false;
     vi.advanceTimersByTime(250);
     expect(book.page).toBe(2);
     p.destroy();

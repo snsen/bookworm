@@ -15,17 +15,21 @@ export interface Settings {
   tone: Tone;
   /** EPUB only: changes how much text fits on a page. */
   textSize: TextSize;
+  /** Paper texture, candle light, floating dust and drop caps. */
+  ambience: boolean;
 }
 
 export interface ToneColors {
   paper: string;
   ink: string;
+  /** Colour of ornamental initials. */
+  accent: string;
 }
 
 export const TONES: Record<Tone, ToneColors> = {
-  white: { paper: '#f2f0ea', ink: '#1c1b19' },
-  sepia: { paper: '#e4d4b4', ink: '#3a2b1b' },
-  night: { paper: '#1b1916', ink: '#b9b09f' },
+  white: { paper: '#f2f0ea', ink: '#1c1b19', accent: '#8a2f1c' },
+  sepia: { paper: '#e4d4b4', ink: '#3a2b1b', accent: '#7c3416' },
+  night: { paper: '#1b1916', ink: '#b9b09f', accent: '#c9a25e' },
 };
 
 export const INTERVAL_MIN = 3;
@@ -41,6 +45,7 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   brightness: 0.75,
   tone: 'sepia',
   textSize: 'medium',
+  ambience: true,
 });
 
 export const BACKGROUND_PRESETS: ReadonlyArray<{ color: string; labelKey: string }> = [
@@ -70,6 +75,7 @@ export function normalizeSettings(input: Partial<Record<keyof Settings, unknown>
     brightness: clamp(num(input.brightness, d.brightness), BRIGHTNESS_MIN, 1),
     tone: pick(input.tone, ['white', 'sepia', 'night'] as const, d.tone),
     textSize: pick(input.textSize, ['small', 'medium', 'large'] as const, d.textSize),
+    ambience: typeof input.ambience === 'boolean' ? input.ambience : d.ambience,
   };
 }
 

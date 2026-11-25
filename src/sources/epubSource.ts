@@ -218,6 +218,10 @@ export class EpubSource implements BookSource {
       img:not([data-kind="vector"]) { filter: var(--epub-raster-filter, none); }
       figure, img, svg, table, pre, blockquote { break-inside: avoid; }
       a { color: inherit !important; text-decoration: none !important; pointer-events: none; }
+      :is(h1, h2, h3, header, hgroup) + p::first-letter {
+        float: var(--dropcap-float, none); font-size: var(--dropcap-size, 1em); line-height: 0.82;
+        margin: 0.08em 0.09em 0 0; color: var(--dropcap-color, inherit); font-style: normal;
+      }
       [style*="fixed" i] { position: static !important; }
     `);
     this.fontSheet = new CSSStyleSheet();

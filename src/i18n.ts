@@ -38,6 +38,8 @@ export const t = {
   toneSepia: 'Sepya',
   toneNight: 'Gece',
   textSize: 'Yazı boyutu (EPUB)',
+  ambience: 'Masalsı atmosfer',
+  ambienceHint: 'Kâğıt dokusu, mum ışığı, süzülen toz ve süslü ilk harfler',
   textSmall: 'Küçük',
   textMedium: 'Orta',
   textLarge: 'Büyük',

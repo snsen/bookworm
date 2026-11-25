@@ -94,6 +94,8 @@ export class SettingsPanel {
     );
     const loop = toggle(t.loop, (v) => onChange({ loop: v }));
     const sound = toggle(t.sound, (v) => onChange({ sound: v }));
+    const ambience = toggle(t.ambience, (v) => onChange({ ambience: v }));
+    ambience.el.title = t.ambienceHint;
 
     const reset = h('button', { type: 'button', class: 'text-btn' }, t.resetDefaults);
     reset.addEventListener('click', () => onChange({ ...DEFAULT_SETTINGS }));
@@ -112,6 +114,8 @@ export class SettingsPanel {
       bright,
       h('div', { class: 'row' }, h('span', { class: 'label' }, t.tone)),
       tone.el,
+      ambience.el,
+      h('p', { class: 'hint' }, t.ambienceHint),
       h('div', { class: 'row' }, h('span', { class: 'label' }, t.textSize)),
       textSize.el,
       h('footer', {}, reset),
@@ -134,6 +138,7 @@ export class SettingsPanel {
       textSize.set(s.textSize);
       loop.set(s.loop);
       sound.set(s.sound);
+      ambience.set(s.ambience);
     };
   }
 

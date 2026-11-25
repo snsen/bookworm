@@ -21,6 +21,11 @@ export class FlipBook {
   private flipListeners = new Set<FlipListener>();
   private turnStartListeners = new Set<() => void>();
   private destroyed = false;
+  /**
+   * Turns requested while a page is still moving. Interrupting a running turn can leave
+   * a hard cover stuck mid-rotation in the engine, so requests wait for the turn to end.
+   */
+  private pending = 0;
 
   constructor(container: HTMLElement, opts: FlipBookOptions) {
     this.root = document.createElement('div');
@@ -65,6 +70,7 @@ export class FlipBook {
     });
     this.engine.on('changeState', (e) => {
       if (e.data.state === FlippingState.FLIPPING) for (const l of this.turnStartListeners) l();
+      if (e.data.state === FlippingState.READ && this.pending !== 0) setTimeout(this.drain, 0);
     });
     this.engine.loadFromHTML(pages);
   }
@@ -106,14 +112,35 @@ export class FlipBook {
   }
 
   next(): boolean {
+    if (this.engine.isAnimating()) {
+      this.pending = Math.min(2, Math.max(0, this.pending) + 1);
+      return true;
+    }
     return this.engine.flipNext();
   }
 
   prev(): boolean {
+    if (this.engine.isAnimating()) {
+      this.pending = Math.max(-2, Math.min(0, this.pending) - 1);
+      return true;
+    }
     return this.engine.flipPrev();
   }
 
+  private drain = (): void => {
+    if (this.destroyed || this.pending === 0 || this.engine.isAnimating()) return;
+    if (this.pending > 0) {
+      this.pending--;
+      this.engine.flipNext();
+    } else {
+      this.pending++;
+      this.engine.flipPrev();
+    }
+  };
+
   goTo(page: number, animate = true): void {
+    this.pending = 0;
+    if (this.engine.isAnimating()) this.engine.cancelTurn();
     const target = Math.max(0, Math.min(this.pageCount - 1, page));
     if (animate) this.engine.flipToPage(target);
     else this.engine.turnToPage(target);

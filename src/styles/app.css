@@ -51,6 +51,8 @@ button {
 }
 
 .book-area {
+  position: relative;
+  z-index: 1;
   display: grid;
   place-items: center;
   width: 100%;
@@ -141,6 +143,8 @@ button {
 /* ───────── welcome ───────── */
 
 .welcome {
+  position: relative;
+  z-index: 1;
   grid-area: 1 / 1;
   display: flex;
   flex-direction: column;
@@ -568,5 +572,100 @@ body.ui-idle * {
   .dim,
   .stage {
     transition: none;
+  }
+}
+
+/* ───────── fairy-tale ambience (Settings → "Masalsı atmosfer") ───────── */
+
+/* Aged paper: fine grain, soft mottling and a gentle darkening towards the edges. */
+body.ambience .page-inner::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 75% 70% at 50% 48%, transparent 55%, rgba(92, 56, 22, 0.2) 100%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='420'%3E%3Cfilter id='m'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.012' numOctaves='3' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 .45 0 0 0 0 .3 0 0 0 0 .12 0 0 0 .55 -.18'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23m)'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .3 0 0 0 0 .2 0 0 0 0 .1 0 0 0 .22 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+}
+[data-tone='night'] body.ambience .page-inner::before {
+  background:
+    radial-gradient(ellipse 75% 70% at 50% 48%, transparent 55%, rgba(0, 0, 0, 0.35) 100%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .8 0 0 0 0 .7 0 0 0 0 .5 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+}
+body.ambience .page-inner::after {
+  z-index: 2;
+}
+
+/* Ornamental initial at the start of chapters (EPUB). */
+body.ambience {
+  --dropcap-float: left;
+  --dropcap-size: 3.3em;
+  --dropcap-color: var(--accent-ink);
+}
+
+/* Warm candle light behind the book, breathing very slowly. */
+body.ambience .stage::before {
+  content: '';
+  position: absolute;
+  inset: -10%;
+  pointer-events: none;
+  background: radial-gradient(ellipse 48% 52% at 50% 52%, rgba(255, 176, 92, 0.13), rgba(255, 150, 70, 0.04) 55%, transparent 75%);
+  animation: candle 7s ease-in-out infinite alternate;
+}
+@keyframes candle {
+  0% { opacity: 0.75; transform: scale(1); }
+  35% { opacity: 1; transform: scale(1.015); }
+  60% { opacity: 0.85; transform: scale(0.995); }
+  100% { opacity: 0.95; transform: scale(1.01); }
+}
+
+/* Dust motes drifting through the light. */
+.dust {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  overflow: hidden;
+  display: none;
+}
+body.ambience.has-book .dust {
+  display: block;
+}
+.dust span {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+  background: rgba(255, 226, 170, 0.9);
+  box-shadow: 0 0 6px 1px rgba(255, 200, 120, 0.6);
+  opacity: 0;
+  animation: drift linear infinite;
+  will-change: transform, opacity;
+}
+@keyframes drift {
+  0% { transform: translate(0, 0); opacity: 0; }
+  15% { opacity: var(--glow); }
+  50% { opacity: calc(var(--glow) * 0.5); }
+  80% { opacity: var(--glow); }
+  100% { transform: translate(var(--drift-x), var(--drift-y)); opacity: 0; }
+}
+
+.settings .hint {
+  margin: -0.4rem 0 0;
+  color: var(--ui-muted);
+  font-size: 0.8rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.ambience .stage::before,
+  .dust span {
+    animation: none;
+  }
+  .dust {
+    display: none !important;
   }
 }
